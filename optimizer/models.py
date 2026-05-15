@@ -21,7 +21,7 @@ class Track:
         self.BPM = None
         self.signature = None
         self.annotations = []
-        self.track_preference = 1.0
+        self.preference = 1.0
         self.min_speed = 0.98
         self.max_speed = 1.2
 

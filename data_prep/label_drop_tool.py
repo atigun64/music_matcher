@@ -182,8 +182,7 @@ def robust_z(x):
     return (x - med) / scale
 
 
-DROP_LEAD_BEATS = -5
-
+DROP_LEAD_BEATS = -3
 
 def build_candidate_score(E, O, C, B):
     E = np.asarray(E, dtype=float)
@@ -204,10 +203,10 @@ def build_candidate_score(E, O, C, B):
 
     score = np.zeros(n, dtype=float)
 
-    for i in range(20 + DROP_LEAD_BEATS, n - 10 + DROP_LEAD_BEATS):
+    for i in range(WINDOW_BEFORE_BEATS, n - WINDOW_AFTER_BEATS):
         pre = slice(i - 16 - DROP_LEAD_BEATS, i - 10 - DROP_LEAD_BEATS)
         build = slice(i - 10 - DROP_LEAD_BEATS, i - 4 - DROP_LEAD_BEATS)
-        drop = slice(i - DROP_LEAD_BEATS, i + 4 - DROP_LEAD_BEATS)
+        drop = slice(i - 4 - DROP_LEAD_BEATS, i + 4 - DROP_LEAD_BEATS)
 
         pre_E = np.mean(Ez[pre])
         build_E = np.mean(Ez[build])

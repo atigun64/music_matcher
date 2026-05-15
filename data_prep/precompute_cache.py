@@ -106,7 +106,7 @@ def worker_loop(in_q: mp.Queue, out_q: mp.Queue):
     - processes many songs
     """
     try:
-        from extract_features import extract_features
+        from feature_extraction.extract_features import extract_features
     except Exception as e:
         out_q.put(("fatal_import_error", repr(e)))
         return

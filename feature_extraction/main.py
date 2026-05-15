@@ -3,11 +3,11 @@ import random
 import numpy as np
 from scipy.signal import find_peaks
 
-from extract_features import extract_features
-from drop_detector import score_beats
+from feature_extraction.extract_features import extract_features
+from feature_extraction.drop_heuristic import score_drops
 
 DATASET_ROOT = Path("ncs_dataset")
-THRESHOLD = 0.7
+THRESHOLD = 0
 
 def get_random_song():
     files = []
@@ -57,7 +57,7 @@ def main():
     print(f"Selected song: {song_path}")
 
     E, O, C, F, B, bpm, beat_times, frame_times = extract_features(str(song_path))
-    score = score_beats(E, O, B)
+    score = score_drops(E, O, B, C)
 
     peaks, props = find_peaks(score, height=THRESHOLD, distance=4)
     peaks = suppress_close_peaks(peaks, score, beat_times, min_sep_sec=10.0)

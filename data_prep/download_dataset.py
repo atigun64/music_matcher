@@ -2,20 +2,11 @@
 #
 # Requirements:
 #   pip install yt-dlp
-#
-# Optional (recommended):
-#   Install ffmpeg and make sure it's in PATH
+#   ffmpeg installed and in PATH
 #
 # Usage:
 #   python download_ncs_dataset.py
-#
-# This script:
-#   - downloads many NCS songs
-#   - extracts audio as mp3
-#   - saves metadata
-#   - creates a clean dataset structure
 
-import os
 import json
 from pathlib import Path
 from yt_dlp import YoutubeDL
@@ -24,19 +15,68 @@ from yt_dlp import YoutubeDL
 # CONFIG
 # =========================
 
-OUTPUT_DIR = "ncs_dataset"
-
-# Official NCS uploads playlist/channel
+OUTPUT_DIR = Path("ncs_dataset")
 NCS_URL = "https://www.youtube.com/@NoCopyrightSounds/videos"
-
-# Max number of songs to download
-MAX_DOWNLOADS = 300
+MAX_DOWNLOADS = 500
+ARCHIVE_FILE = OUTPUT_DIR / "downloaded.txt"
 
 # =========================
 # SETUP
 # =========================
 
-Path(OUTPUT_DIR).mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+# =========================
+# HELPERS
+# =========================
+
+def load_archive_ids() -> set[str]:
+    """Read already-downloaded IDs from the archive file."""
+    ids = set()
+    if ARCHIVE_FILE.exists():
+        with open(ARCHIVE_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split(maxsplit=1)
+                if len(parts) == 2 and parts[0] == "youtube":
+                    ids.add(parts[1])
+    return ids
+
+def seed_archive_from_existing_files():
+    """
+    If you already have some downloaded files in OUTPUT_DIR,
+    add them to the archive so yt-dlp skips them.
+    """
+    ids = load_archive_ids()
+
+    # Case 1: folders named by video id, with mp3 inside
+    for track_dir in OUTPUT_DIR.iterdir():
+        if not track_dir.is_dir():
+            continue
+
+        if any(track_dir.glob("*.mp3")):
+            ids.add(track_dir.name)
+
+        # Case 2: metadata.json exists, extract youtube id if possible
+        meta_path = track_dir / "metadata.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                url = meta.get("youtube_url", "")
+                if "v=" in url:
+                    video_id = url.split("v=")[-1].split("&")[0]
+                    ids.add(video_id)
+            except Exception:
+                pass
+
+    with open(ARCHIVE_FILE, "w", encoding="utf-8") as f:
+        for video_id in sorted(ids):
+            f.write(f"youtube {video_id}\n")
+
+# Seed archive from what you already have
+seed_archive_from_existing_files()
 
 # =========================
 # YT-DLP OPTIONS
@@ -44,14 +84,20 @@ Path(OUTPUT_DIR).mkdir(exist_ok=True)
 
 ydl_opts = {
     "format": "bestaudio/best",
-    "extractaudio": True,
-    "audioformat": "mp3",
-    "outtmpl": f"{OUTPUT_DIR}/%(id)s/%(title)s.%(ext)s",
+    "outtmpl": str(OUTPUT_DIR / "%(id)s" / "%(title)s.%(ext)s"),
     "ignoreerrors": True,
     "quiet": False,
+
+    # This makes yt-dlp skip anything already in downloaded.txt
+    "download_archive": str(ARCHIVE_FILE),
+
+    # Limit how many entries from the channel it will process
     "playlistend": MAX_DOWNLOADS,
 
-    # Extract audio
+    # Saves metadata automatically as .info.json next to the file
+    "writeinfojson": True,
+
+    # Convert to mp3
     "postprocessors": [
         {
             "key": "FFmpegExtractAudio",
@@ -66,35 +112,6 @@ ydl_opts = {
 # =========================
 
 with YoutubeDL(ydl_opts) as ydl:
-
-    info = ydl.extract_info(NCS_URL, download=True)
-
-    entries = info.get("entries", [])
-
-    for entry in entries:
-
-        if entry is None:
-            continue
-
-        video_id = entry.get("id", "unknown")
-
-        track_dir = Path(OUTPUT_DIR) / video_id
-        track_dir.mkdir(exist_ok=True)
-
-        metadata = {
-            "title": entry.get("title"),
-            "uploader": entry.get("uploader"),
-            "duration": entry.get("duration"),
-            "view_count": entry.get("view_count"),
-            "upload_date": entry.get("upload_date"),
-            "youtube_url": f"https://youtube.com/watch?v={video_id}",
-            "description": entry.get("description"),
-            "tags": entry.get("tags"),
-        }
-
-        metadata_path = track_dir / "metadata.json"
-
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
+    ydl.download([NCS_URL])
 
 print("\nDone.")

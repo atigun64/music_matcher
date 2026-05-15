@@ -1,6 +1,8 @@
-from config import librosa, es
+import essentia.standard as es
+import librosa
+
 import numpy as np
-from utils import beat_sync, smooth
+from feature_extraction.utils import beat_sync, smooth
 
 def extract_features(audio_path):
     # ----------------------------

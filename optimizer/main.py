@@ -60,7 +60,7 @@ def build_test_tracks() -> TrackLibrary:
     return tracks
 
 
-def best_request_match(request_time_ticks: float, alignment) -> tuple[float, float]:
+def best_request_match(request_time_ticks: float, alignment):
     """
     Returns:
         (best_drop_time_ticks, abs_error_ticks)
