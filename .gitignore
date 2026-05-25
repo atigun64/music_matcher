@@ -1,3 +1,4 @@
 .env
-ncs_dataset
-feature_cache
+data
+/music_drop/data
+drop_model.joblib

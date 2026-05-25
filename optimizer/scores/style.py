@@ -1,4 +1,4 @@
-from models import TrackSignature, Alignment
+from optimizer.models import TrackSignature, Alignment
 from .utils import clamp01, track_duration
 import math
 

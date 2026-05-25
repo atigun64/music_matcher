@@ -1,4 +1,4 @@
-from models import PointAnnotation, AssignedTrack, Alignment
+from optimizer.models import PointAnnotation, AssignedTrack, Alignment
 from .utils import track_end_time, clamp01
 from .config import HERTZ
 import math

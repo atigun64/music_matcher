@@ -1,20 +1,17 @@
-from models import Query, Track, TrackLibrary, PointAnnotation, TrackSignature
-from core import BeamSearch
-
-from config import HERTZ
-from utils import sec_to_ticks, ticks_to_sec
+from optimizer.models import Query, Track, TrackLibrary, PointAnnotation, TrackSignature
+from optimizer.core import BeamSearch
 
 def build_test_query() -> Query:
     q = Query()
-    q.set_length(sec_to_ticks(180.0))
+    q.set_length(180.0)
 
     # Video signature (normalized)
     q.set_signature(TrackSignature([0.6, 0.4, 0.8, 0.3]))
 
     # Requested drops in seconds -> convert to ticks
-    q.add_annotation(PointAnnotation("drop", time=sec_to_ticks(30.0), strength=1.0))
-    q.add_annotation(PointAnnotation("drop", time=sec_to_ticks(95.0), strength=1.0))
-    q.add_annotation(PointAnnotation("drop", time=sec_to_ticks(150.0), strength=0.1))
+    q.add_annotation(PointAnnotation("drop", time=30.0, strength=1.0))
+    q.add_annotation(PointAnnotation("drop", time=95.0, strength=1.0))
+    q.add_annotation(PointAnnotation("drop", time=150.0, strength=0.1))
 
     return q
 
@@ -24,37 +21,40 @@ def build_test_tracks() -> TrackLibrary:
 
     # Track A: good if placed so its 35s drop lands near 30s
     a = Track()
-    a.set_length(sec_to_ticks(60.0))
+    a.set_length(60.0)
     a.set_BPM(128)
     a.set_signature(TrackSignature([0.62, 0.38, 0.79, 0.28]))
+    a.set_track_id("track_a")
     a.preference = 0.9
     a.min_speed = 0.98
     a.max_speed = 1.20
-    a.add_annotation(PointAnnotation("drop", time=sec_to_ticks(12.0), strength=0.9))
-    a.add_annotation(PointAnnotation("drop", time=sec_to_ticks(35.0), strength=0.7))
+    a.add_annotation(PointAnnotation("drop", time=12.0, strength=0.9))
+    a.add_annotation(PointAnnotation("drop", time=35.0, strength=0.7))
     tracks.add_track(a)
 
     # Track B: good if placed so its 20s drop lands near 95s
     b = Track()
-    b.set_length(sec_to_ticks(75.0))
+    b.set_length(75.0)
     b.set_BPM(174)
     b.set_signature(TrackSignature([0.58, 0.45, 0.75, 0.35]))
+    b.set_track_id("track_b")
     b.preference = 0.8
     b.min_speed = 0.98
     b.max_speed = 1.20
-    b.add_annotation(PointAnnotation("drop", time=sec_to_ticks(20.0), strength=1.0))
-    b.add_annotation(PointAnnotation("drop", time=sec_to_ticks(50.0), strength=0.8))
+    b.add_annotation(PointAnnotation("drop", time=20.0, strength=1.0))
+    b.add_annotation(PointAnnotation("drop", time=50.0, strength=0.8))
     tracks.add_track(b)
 
     # Track C: good if placed so its 12s drop lands near 150s
     c = Track()
-    c.set_length(sec_to_ticks(50.0))
+    c.set_length(50.0)
     c.set_BPM(110)
     c.set_signature(TrackSignature([0.40, 0.60, 0.55, 0.20]))
+    c.set_track_id("track_c")
     c.preference = 0.6
     c.min_speed = 0.98
     c.max_speed = 1.20
-    c.add_annotation(PointAnnotation("drop", time=sec_to_ticks(12.0), strength=0.6))
+    c.add_annotation(PointAnnotation("drop", time=12.0, strength=0.6))
     tracks.add_track(c)
 
     return tracks
@@ -104,19 +104,20 @@ def main():
     print("\n---- TRACKS ----")
     for i, track in enumerate(alignment.tracks, start=1):
         print(f"\nTrack {i}")
-        print("  start_time:", ticks_to_sec(track.start_time))
-        print("  length:", ticks_to_sec(track.length))
+        print("  start_time:", track.start_time)
+        print("  length:", track.length)
         print("  BPM:", track.BPM)
         print("  speed:", track.speed)
         print("  preference:", track.preference)
         print("  signature:", track.signature.sig if track.signature else None)
+        print("  track_id:", track.track_id)
 
         for ann in track.annotations:
             if ann.label == "drop":
                 placed_drop = track.start_time + (ann.time / track.speed)
                 print(
                     "   drop:",
-                    ticks_to_sec(placed_drop),
+                    placed_drop,
                     "strength:",
                     ann.strength
                 )
@@ -131,15 +132,15 @@ def main():
         best_drop_time, best_error = best_request_match(req.time, alignment)
 
         if best_drop_time is None:
-            print("Request", ticks_to_sec(req.time), "-> no match found")
+            print("Request", req.time, "-> no match found")
         else:
             print(
                 "Request",
-                ticks_to_sec(req.time),
+                req.time,
                 "-> best placed drop at",
-                ticks_to_sec(best_drop_time),
+                best_drop_time,
                 "error =",
-                ticks_to_sec(best_error),
+                best_error,
                 "sec"
             )
 

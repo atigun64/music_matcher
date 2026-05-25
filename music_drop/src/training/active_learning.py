@@ -19,7 +19,7 @@ def active_learning_loop(
     # Build current unlabeled pool
     unlabeled_pool = build_pool(
         train_track_ids,
-        heuristic_per_track=10,
+        heuristic_per_track=20,
         background_per_track=10,
     )
 
@@ -28,6 +28,7 @@ def active_learning_loop(
         s for s in unlabeled_pool
         if (s.track_id, s.beat_idx) not in labeled_keys
     ]
+    print(f"Initial unlabeled pool size: {len(unlabeled_pool)}")
 
     # If this is the first run, label an initial seed batch
     if len(labeled_samples) == 0:

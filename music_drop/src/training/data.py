@@ -10,3 +10,4 @@ class Sample:
     y: Optional[int] = None   # label, 0/1
     source: str = ""          # "heuristic" or "background"
     hscore: float = 0.0       # heuristic score
+    mscore: float = 0.0       # model score

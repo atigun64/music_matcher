@@ -1,6 +1,6 @@
 from pathlib import Path
 
-DATASET_ROOT = Path("music_drop", "data", "ncs_dataset")
+DATASET_ROOT = Path("music_drop", "data", "music_dataset")
 CACHE_ROOT = Path("music_drop", "data", "feature_cache")
 AUDIO_EXTS = {".mp3", ".wav", ".flac", ".ogg", ".m4a"}
 

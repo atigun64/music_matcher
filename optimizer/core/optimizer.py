@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import List
 import math
 
-from models import Query, TrackLibrary, Alignment, AssignedTrack, Track, PointAnnotation
-from scores import score_alignment_partial, score_alignment_final
+from optimizer.models import Query, TrackLibrary, Alignment, AssignedTrack, Track, PointAnnotation
+from optimizer.scores import score_alignment_partial, score_alignment_final
 from .config import DROP_MISS_TOLERANCE, MAX_ACCEPTABLE_OVERLAP
 
 
@@ -297,6 +297,7 @@ class BeamSearch(Optimizer):
     def _assign_track(self, track: Track, start_time: float, speed: float) -> AssignedTrack:
         assigned = AssignedTrack()
 
+        assigned.track_id = track.track_id
         assigned.length = track.length
         assigned.BPM = track.BPM
         assigned.signature = track.signature

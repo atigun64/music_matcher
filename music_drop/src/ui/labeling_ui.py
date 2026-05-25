@@ -158,8 +158,12 @@ class _SampleApp:
         self.window_var.set(
             f"Window: {self._fmt_time(start_sec)} → {self._fmt_time(end_sec)}   "
             f"(duration {duration:.2f}s)    "
-            f"Key point: {self._fmt_time(sample.key_point)}"
+            f"Key point: {self._fmt_time(sample.key_point)}    "
+            f"Tolerance: {self._fmt_time(sample.tolerance_window[0])} → {self._fmt_time(sample.tolerance_window[1])}    "
+            f"Model score: {getattr(sample, 'model_score', 0.0):.3f}"
         )
+
+
 
         if self.read_only:
             self.label_var.set("")
@@ -208,6 +212,29 @@ class _SampleApp:
 
         self.canvas.create_line(key_x, y0, key_x, y1, fill="#ff4d4d", width=3)
         self.canvas.create_text(key_x, y0 - 10, text="key", fill="#ff8080")
+        
+        # tolerance window markers
+        tol_start_sec, tol_end_sec = sample.tolerance_window
+
+        tol_start_rel = (tol_start_sec - start_sec) / duration
+        tol_end_rel = (tol_end_sec - start_sec) / duration
+        tol_start_rel = min(max(tol_start_rel, 0.0), 1.0)
+        tol_end_rel = min(max(tol_end_rel, 0.0), 1.0)
+
+        tol_start_x = left + tol_start_rel * (right - left)
+        tol_end_x = left + tol_end_rel * (right - left)
+
+        self.canvas.create_line(
+            tol_start_x, y0, tol_start_x, y1,
+            fill="#d9a441", width=2, dash=(4, 2)
+        )
+        self.canvas.create_line(
+            tol_end_x, y0, tol_end_x, y1,
+            fill="#d9a441", width=2, dash=(4, 2)
+        )
+
+        self.canvas.create_text(tol_start_x, y0 - 10, text="tol-", fill="#d9a441")
+        self.canvas.create_text(tol_end_x, y0 - 10, text="tol+", fill="#d9a441")
 
         # playhead marker
         if playhead_sec is not None:

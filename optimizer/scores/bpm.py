@@ -1,4 +1,4 @@
-from models import AssignedTrack, Alignment
+from optimizer.models import AssignedTrack, Alignment
 from .utils import track_duration, range_score, clamp01
 
 from .config import (

@@ -1,4 +1,4 @@
-from config import HERTZ
+HERTZ = 1.0
 
 DROP_MISS_TOLERANCE_SEC = 2.0 # Tolerance in seconds for drop annotations
 MAX_ACCEPTABLE_GAP_SEC = 5.0       # seconds

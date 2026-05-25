@@ -1,4 +1,4 @@
-from models import Alignment
+from optimizer.models import Alignment
 from .utils import clamp01, track_duration
 
 def score_average_preference(alignment: Alignment):
@@ -15,7 +15,7 @@ def score_average_preference(alignment: Alignment):
         if duration <= 0:
             continue
 
-        preference = clamp01(track.track_preference)
+        preference = clamp01(track.preference)
         total += preference * duration
         total_duration += duration
 

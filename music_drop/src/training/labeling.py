@@ -30,13 +30,22 @@ def label_batch(samples: List[Sample]) -> List[Sample]:
         audio_path = cache.audio_path_from_id(s.track_id)
         beat_times = cache.get_by_id(s.track_id)["beat_times"]
 
+        left_idx = max(0, s.beat_idx - 5)
+        right_idx = min(len(beat_times) - 1, s.beat_idx + 5)
+
+        left_time = beat_times[left_idx]
+        right_time = beat_times[right_idx]
+
         ui_samples.append(
             UISample(
                 track_path=audio_path,
                 key_point=beat_times[s.beat_idx],
                 time_window=window_times(beat_idx=s.beat_idx, beat_times=beat_times),
+                tolerance_window=(left_time, right_time),
+                model_score=s.mscore,
             )
         )
+
 
     labels = UI.sample(ui_samples)
 
@@ -80,6 +89,7 @@ def save_labeled_samples(samples: List[Sample], split: str = "train") -> None:
             "y": int(s.y),
             "source": s.source,
             "hscore": float(s.hscore),
+            "mscore": float(s.mscore),
         }
         existing[_sample_key(s.track_id, s.beat_idx)] = rec
 
@@ -87,6 +97,29 @@ def save_labeled_samples(samples: List[Sample], split: str = "train") -> None:
         for rec in existing.values():
             f.write(json.dumps(rec) + "\n")
 
+
+def rewrite_labeled_samples(samples: List[Sample], split: str = "train") -> None:
+    """
+    Rewrite all the samples on disk
+    clears the existing file and writes only the provided samples.
+    """
+    path = _label_file(split)
+
+    with path.open("w", encoding="utf-8") as f:
+        for s in samples:
+            if s.y is None:
+                continue
+
+            rec = {
+                "track_id": s.track_id,
+                "beat_idx": int(s.beat_idx),
+                "y": int(s.y),
+                "source": s.source,
+                "hscore": float(s.hscore),
+                "mscore": float(s.mscore),
+            }
+            f.write(json.dumps(rec) + "\n")
+    
 
 def load_labeled_samples(split: str = "train") -> List[Sample]:
     """
@@ -111,6 +144,7 @@ def load_labeled_samples(split: str = "train") -> List[Sample]:
                 beat_idx=int(rec["beat_idx"]),
                 source=rec.get("source", ""),
                 hscore=float(rec.get("hscore", 0.0)),
+                mscore=float(rec.get("mscore", 0.0)),
             )
             s.y = int(rec["y"])
             samples.append(s)

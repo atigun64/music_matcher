@@ -5,8 +5,7 @@ from music_drop.src.training.labeling import label_batch, save_labeled_samples
 from music_drop.src.cache import AudioFeatureCache
 
 
-DATASET_ROOT = Path("music_drop", "data", "ncs_dataset")
-THRESHOLD = 0.65
+DATASET_ROOT = Path("music_drop", "data", "music_dataset")
 MAX_PER_TRACK = 10   # optional cap, change or remove if you want
 
 
@@ -30,17 +29,10 @@ def build_high_heuristic_batch(track_ids):
 
         cand = heuristic_candidates(payload)
 
-        # keep only strong heuristic candidates
-        strong = [
-            (beat_idx, hscore)
-            for beat_idx, _, hscore in cand
-            if hscore >= THRESHOLD
-        ]
-
         # optional: take only top N per track
-        strong = strong[:MAX_PER_TRACK]
+        cand = cand[:MAX_PER_TRACK]
 
-        for beat_idx, hscore in strong:
+        for beat_idx, _, hscore in cand:
             samples.append(
                 make_sample(
                     track_id=track_id,
@@ -58,7 +50,7 @@ if __name__ == "__main__":
     track_ids = get_track_ids()
     samples = build_high_heuristic_batch(track_ids)
 
-    print(f"Collected {len(samples)} heuristic samples with hscore >= {THRESHOLD}")
+    print(f"Collected {len(samples)} heuristic samples")
 
     labeled = label_batch(samples)
     save_labeled_samples(labeled, split="train")

@@ -1,4 +1,4 @@
-from models import Alignment, PointAnnotation
+from optimizer.models import Alignment, PointAnnotation
 from .utils import clamp01
 
 from .drop import score_alignment_drops_final, score_alignment_drops_partial

@@ -1,4 +1,4 @@
-from models import AssignedTrack
+from optimizer.models import AssignedTrack
 
 def clamp01(x):
     if x is None:

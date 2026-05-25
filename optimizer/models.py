@@ -17,6 +17,7 @@ class TrackSignature:
 
 class Track:
     def __init__(self):
+        self.track_id = None
         self.length = None
         self.BPM = None
         self.signature = None
@@ -24,6 +25,9 @@ class Track:
         self.preference = 1.0
         self.min_speed = 0.98
         self.max_speed = 1.2
+
+    def set_track_id(self, track_id):
+        self.track_id = track_id
 
     def set_length(self, length):
         self.length = length

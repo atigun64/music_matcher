@@ -6,12 +6,13 @@ from .data import Sample
 from music_drop.src.cache import AudioFeatureCache
 
 from music_core import detect_candidates, score_drops, build_feature_window
+from .utils import sample_to_vector
 
 
 _cache = AudioFeatureCache()
 
 
-def make_sample(track_id, beat_idx, source, hscore, payload=None):
+def make_sample(track_id, beat_idx, source, hscore, mscore=0.0, payload=None):
     if payload is None:
         print("track_id:", track_id)
         payload = _cache.get_by_id(track_id)
@@ -23,6 +24,7 @@ def make_sample(track_id, beat_idx, source, hscore, payload=None):
         x=build_feature_window(payload["E"], payload["O"], payload["B"], payload["C"], beat_idx),
         source=source,
         hscore=hscore,
+        mscore=mscore,
     )
 
 
@@ -34,6 +36,8 @@ def heuristic_candidates(payload):
         payload["C"],
         payload["B"],
         payload["beat_times"],
+        threshold=0.64,
+        max_candidates=7,
     )
 
 
@@ -97,14 +101,17 @@ def build_pool(track_ids, heuristic_per_track=3, background_per_track=0):
 
 
 
-
 def select_queries(model, pool: List[Sample], batch_size=20):
     if len(pool) == 0:
         return []
 
     # sklearn-style tabular input
-    X = np.stack([s.x.reshape(-1) for s in pool])
+    X = np.stack([sample_to_vector(s) for s in pool])
     p = model.predict_proba(X)[:, 1]
+
+    # save model score into each pool item
+    for s, ms in zip(pool, p):
+        s.mscore = float(ms)
 
     uncertainty = 1.0 - np.abs(p - 0.5) * 2.0
 
