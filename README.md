@@ -1,96 +1,294 @@
 # Music Alignment Optimizer
 
-A Python project for automatically matching music tracks to a requested timeline by aligning musical drop points and beat structure.
+A Python project for detecting musical drops, building a track library, and aligning tracks to a requested timeline using drop points, beat structure, BPM, and signature constraints.
 
-This repository now contains three main capabilities:
+The system has three major parts:
 
-- **ML-based drop detection**: a trained model (`drop_model.joblib`) scores likely drop points inside tracks.
-- **Track library / app services**: upload tracks, extract features and drop candidates, store track metadata and annotations.
-- **Studio query + optimizer**: define a studio query with requested drop points, then run the optimizer to align tracks to that query.
+1. **Drop detection pipeline**
+2. **Track/query data model**
+3. **Alignment optimizer**
 
-## What it does today
+---
 
-### Drop detection
+## Overview
 
-The pipeline extracts audio features and beat information from an uploaded track, then:
+The core idea is:
 
-- runs heuristic candidate detection on audio feature signals,
-- scores candidates with a trained `drop_model.joblib`,
-- filters strong drop proposals,
-- returns time-aligned drop annotations for the track.
+- extract audio features from a track,
+- compute beat-synchronous descriptors,
+- detect likely drop regions using a heuristic,
+- optionally refine those candidates with a trained ML model,
+- use the resulting drop annotations as input to a beam-search optimizer,
+- align tracks to a requested query timeline.
 
-The ML model is used by `music_core/drop/drop_ml.py` and is integrated into `app/services/track_service.py` during track upload.
+This project is currently a **backend-first prototype**.  
+The main logic works, while the user-facing UI is still evolving.
 
-### Track library
+---
 
+## Main components
 
-Uploaded tracks are stored in `data/track_library/` with:
+| Component | Purpose |
+|---|---|
+| `music_core/` | Feature extraction, heuristic scoring, ML drop scoring, candidate selection |
+| `music_drop/` | Dataset utilities, labeling tools, training scripts, active-learning helpers |
+| `optimizer/` | Query/track models and beam-search alignment engine |
+| `app/` | Higher-level services, persistence, and integration layer |
+| `data/` | Stored track metadata, studio sessions, and related artifacts |
 
-- `meta.json` metadata (length, BPM, signature, speed constraints),
-- `annotations.json` detected drop points,
-- `audio_path.txt` reference to the source audio file.
+---
 
-Track upload and track CRUD operations are managed by `app.services.track_service.TrackService` and `app.storage.track_store.TrackStore`.
+## How the system works
 
-### Studio query / alignment
+### 1) Feature extraction
+For each audio track, the system extracts beat-synchronous features such as:
 
-The app currently supports a studio workflow that can:
+- energy
+- onset envelope
+- brightness / spectral centroid
+- bass-related features
+- beat times / beat positions
 
-- create and persist `StudioSession` objects,
-- save a user query (`QuerySpec`) describing the desired timeline,
-- store requested drop points and overall track signature,
-- run the optimizer and save the resulting `AlignmentSpec`.
+These are aggregated over beat windows to create a track-level feature sequence.
 
-Studio session data is persisted under `data/studios/`.
+---
 
-### Optimization
+### 2) Heuristic drop candidate detection
+A handcrafted heuristic scores each beat region based on:
 
-The optimizer builds an app-level query from `QuerySpec` and converts stored tracks into optimizer track objects. It uses a beam search implementation in `optimizer/core/optimizer.py` to search for a placement of tracks that maximizes alignment score.
+- buildup behavior before the drop,
+- contrast between pre-drop and drop regions,
+- sudden changes in energy and other descriptors.
+
+This heuristic is used as a **proposal stage**: it does not define the final answer, but it finds likely drop-like regions.
+
+---
+
+### 3) ML-based refinement
+A trained model (`drop_model.joblib`) is used to refine candidate selection.
+
+Training data was built manually using:
+
+- heuristic-generated candidates,
+- human labels,
+- active-learning style iterations,
+- track windows around candidate beats.
+
+The model uses feature vectors built from:
+
+- heuristic score
+- flattened local feature window
+
+So the final classifier learns when to trust the heuristic and when to override it.
+
+---
+
+### 4) Candidate filtering
+The current drop pipeline typically works as:
+
+1. detect heuristic candidates,
+2. score them with the ML model,
+3. suppress candidates that are too close together,
+4. keep only the strongest drop proposals.
+
+This is important because real drops are usually **far apart**, not clustered every few beats.
+
+---
+
+### 5) Alignment optimization
+Once tracks have drop annotations, the optimizer builds:
+
+- a `Query` describing the requested timeline,
+- a `TrackLibrary` containing track metadata and drop annotations,
+
+then runs beam search to find the best placement of tracks into the query.
 
 The optimizer considers:
 
-- requested drop point alignment,
-- track BPM and signature,
+- requested drop points,
+- track BPM,
+- track signature,
 - track speed constraints,
-- overlap and gap scoring.
+- overlap / gap penalties,
+- alignment of placed drops to requested drops.
 
-The result contains placed tracks with start times, speed adjustments, and aligned drop points.
+The output is an `Alignment` containing:
+
+- placed tracks,
+- start times,
+- speed adjustments,
+- matching scores.
+
+---
+
+## Training workflow
+
+The ML detector was trained using a manual/active-learning loop.
+
+### Training process
+1. generate candidate drop windows with the heuristic,
+2. inspect them manually,
+3. label them as drop / not drop,
+4. save labels to disk,
+5. train a model on:
+   - heuristic score
+   - local feature window
+6. repeat with new batches of uncertain examples.
+
+### Feature vector
+The current model input is:
+
+```python
+[hscore, flattened_feature_window]
+```
+
+So the model does **not** use raw audio directly at inference time.  
+It uses the same beat-window representation that was used during training.
+
+---
+
+## Current drop-detection behavior
+
+The detector is intentionally **region-based**, not exact-frame-based.
+
+That means:
+
+- a candidate does not need to hit the exact sample or beat center,
+- a beat within a drop region is usually good enough,
+- nearby beats around a drop are often acceptable.
+
+This is deliberate because exact beat localization is usually too strict for music structure matching.
+
+---
+
+## Track library
+
+Uploaded or indexed tracks are stored with metadata such as:
+
+- length
+- BPM
+- signature
+- speed constraints
+- detected annotations / candidate points
+
+The project supports storing track metadata separately from audio files so the library can be reloaded and reused.
+
+---
+
+## Studio query / alignment
+
+A query describes the requested timeline, for example:
+
+- total length,
+- requested drop points,
+- overall signature.
+
+The optimizer takes this query and tries to place tracks so that their drop annotations line up with the request points.
+
+---
 
 ## Current status
 
-✅ Core backend is implemented:
+### Working
+- feature extraction pipeline
+- heuristic drop detection
+- ML-based drop scoring
+- manual training data collection
+- track/query alignment optimizer
+- track metadata persistence
 
-- `music_core` feature extraction and ML drop detection
-- `app/services/track_service.py` for track upload and annotation extraction
-- `app/services/studio_service.py` for studio session and query management
-- `app/services/run_optimization.py` for converting app models into optimizer models and running the beam search
-- `app/storage` persistence for track and studio data
+### Still rough / in progress
+- user-facing UI
+- polished annotation editing
+- faster browsing / candidate inspection
+- better visualization of alignment results
+- more robust training-data management
 
-⚠️ Remaining work:
+---
 
-- UI layer is not finished yet
-- query creation and video input front-end is currently manual / code-driven
-- better track signature computation is TODO (`TrackService` uses a placeholder signature today)
-- richer query/video matching experience
+## How to use it
 
-## How to use it now
+At the moment, the most useful workflows are script-driven:
 
-A simple console-driven workflow exists in `test2.py` that lets you:
+### Drop detection
+- run feature extraction on a track,
+- detect candidates,
+- inspect the timestamps,
+- optionally label / save them.
 
-1. upload a track and detect drop points,
-2. list saved tracks,
-3. create a studio session,
-4. set a query with requested drop points,
-5. run the optimizer,
-6. inspect the resulting alignment.
+### Training
+- load labeled examples,
+- train the model,
+- save the resulting `drop_model.joblib`.
+
+### Optimization
+- create a query,
+- load tracks and annotations,
+- run beam search,
+- inspect the resulting alignment.
+
+---
 
 ## Project structure
 
-- `music_core/` — audio feature extraction and drop candidate detection logic
-- `music_drop/` — dataset and training-related scripts
-- `app/` — higher-level services, models, persistence, and optimization integration
-- `optimizer/` — search engine and scoring for matching tracks to a requested timeline
+```text
+music_core/
+  feature extraction
+  heuristic drop scoring
+  ML candidate scoring
+  candidate selection
+
+music_drop/
+  dataset tools
+  labeling helpers
+  model training
+  active learning utilities
+
+optimizer/
+  query / track models
+  beam search
+  alignment scoring
+
+app/
+  services
+  persistence
+  integration layer
+
+data/
+  saved tracks
+  metadata
+  studio sessions
+```
+
+---
 
 ## Notes
 
-This repo is currently best described as a backend proof-of-concept where drop detection, track library management, and alignment optimization are working. The missing piece is the user-facing UI, which remains the next development step.
+This repository is best understood as a **drop-aware music alignment system**:
+
+- it can detect likely drops,
+- use them as structured annotations,
+- and optimize track placement against a requested timeline.
+
+The architecture is already useful, but the next major step is to finish the UI and make the detection/annotation workflow easier to use interactively.
+
+---
+
+## Future work
+
+- better UI for browsing tracks and drop candidates
+- better annotation management
+- stronger calibration of the ML drop detector
+- more robust feature extraction / caching
+- better query editing and timeline visualization
+- improved preview playback of aligned results
+
+---
+
+If you want, I can also make this into a **more polished GitHub-style README** with:
+
+- badges,
+- install instructions,
+- example commands,
+- screenshots/section placeholders,
+- and a cleaner “Quick Start” section.

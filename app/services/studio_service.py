@@ -51,6 +51,7 @@ class StudioService:
         if session.query is None:
             raise ValueError("Query not found for this studio session.")
         return session.query
+    
     def save_query(self, studio_id: str, query: QuerySpec) -> None:
         """
         Save the query spec for a studio session.
@@ -67,6 +68,7 @@ class StudioService:
         if session.alignment is None:
             raise ValueError("Alignment not found for this studio session.")
         return session.alignment
+    
     def save_alignment(self, studio_id: str, alignment: AlignmentSpec) -> None:
         """
         Save the alignment spec for a studio session.

@@ -117,83 +117,20 @@ def run_optimizer(query: QuerySpec, track_service: TrackService) -> AlignmentSpe
     Convert app QuerySpec + saved tracks -> optimizer objects,
     run BeamSearch, then convert result back to app AlignmentSpec.
     """
-    print("\n[run_optimizer] starting...", flush=True)
-
     # Load app track records from storage
     track_records = track_service.load_all_tracks()
-    
-    for i, record in enumerate(track_records[:10], start=1):
-      print(
-        f"[run_optimizer] track {i}: id={record.track_id}, "
-        f"length_ticks={record.meta.length_ticks}, "
-        f"bpm={record.meta.bpm}, "
-        f"annotations={len(record.annotations)}",
-        flush=True,
-      )
-
-    for j, ann in enumerate(record.annotations[:10], start=1):
-        print(
-            f"    ann {j}: label={ann.label}, "
-            f"time_ticks={ann.time_ticks}, "
-            f"strength={ann.strength}",
-            flush=True,
-        )
-
-    print(f"[run_optimizer] loaded {len(track_records)} tracks from storage", flush=True)
-
-    if len(track_records) == 0:
-        print("[run_optimizer] WARNING: no tracks available in track library", flush=True)
-
-    # Debug track summary
-    for i, record in enumerate(track_records[:10], start=1):
-        print(
-            f"[run_optimizer] track {i}: id={record.track_id}, "
-            f"length_ticks={record.meta.length_ticks}, "
-            f"bpm={record.meta.bpm}, "
-            f"annotations={len(record.annotations)}",
-            flush=True,
-        )
 
     # Convert query
-    print(
-        f"[run_optimizer] query: length_ticks={query.length_ticks}, "
-        f"signature={query.signature}, "
-        f"requested_points={len(query.requested_points)}",
-        flush=True,
-    )
-
     o_query = _queryspec_to_optimizer(query)
 
     # Convert tracks
     o_library = O_TrackLibrary()
     for record in track_records:
-        o_track = _trackrecord_to_optimizer(record)
-        o_library.add_track(o_track)
-
-    print(f"[run_optimizer] optimizer track library size: {len(o_library.tracks)}", flush=True)
+        o_library.add_track(_trackrecord_to_optimizer(record))
 
     # Run optimizer
     optimizer = BeamSearch(beam_width=100, max_steps=10)
     alignment = optimizer.optimize(o_query, o_library)
 
-    print(
-        f"[run_optimizer] alignment finished: score={alignment.score}, "
-        f"tracks={len(alignment.tracks)}",
-        flush=True,
-    )
-
-    for i, tr in enumerate(alignment.tracks[:10], start=1):
-        print(
-            f"[run_optimizer] aligned track {i}: "
-            f"track_id={getattr(tr, 'track_id', 'unknown')}, "
-            f"start_time={getattr(tr, 'start_time', None)}, "
-            f"speed={getattr(tr, 'speed', None)}, "
-            f"annotations={len(getattr(tr, 'annotations', []))}",
-            flush=True,
-        )
-
     # Convert back to app model
-    app_alignment = _alignment_to_app(alignment)
-
-    print("[run_optimizer] done.\n", flush=True)
-    return app_alignment
+    return _alignment_to_app(alignment)
