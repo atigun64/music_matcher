@@ -276,9 +276,10 @@ The architecture is already useful, but the next major step is to finish the UI 
 
 ## Future work
 
-- better UI for browsing tracks and drop candidates
-- better annotation management
 - stronger calibration of the ML drop detector
+- better UI for browsing tracks and drop candidates
+- improving scoring function for the beam search for better optimization results
+- better annotation management
 - more robust feature extraction / caching
 - better query editing and timeline visualization
 - improved preview playback of aligned results
