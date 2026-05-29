@@ -160,7 +160,8 @@ class _SampleApp:
             f"(duration {duration:.2f}s)    "
             f"Key point: {self._fmt_time(sample.key_point)}    "
             f"Tolerance: {self._fmt_time(sample.tolerance_window[0])} → {self._fmt_time(sample.tolerance_window[1])}    "
-            f"Model score: {getattr(sample, 'model_score', 0.0):.3f}"
+            f"Model score: {getattr(sample, 'model_score', 0.0):.3f}    "
+            f"Label: {getattr(sample, 'label', None)}"
         )
 
 

@@ -7,7 +7,7 @@ if __name__ == "__main__":
     train_track_ids = sorted([
         p.name
         for p in DATASET_ROOT.iterdir()
-        if p.is_dir()
+        if p.is_dir() and p.__sizeof__() < 20 * 1024 * 1024  # Filter out tracks larger than 100MB
     ])
 
     model, labeled_samples = active_learning_loop(

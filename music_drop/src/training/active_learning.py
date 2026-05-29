@@ -2,7 +2,7 @@ import random
 
 from .train import train_model
 from .labeling import label_batch, load_labeled_samples, save_labeled_samples
-from .sampling import build_pool, select_queries
+from .sampling import build_pool, select_queries, pool_filter
 
 
 def active_learning_loop(
@@ -14,20 +14,10 @@ def active_learning_loop(
 ):
     # Load previously saved labeled samples
     labeled_samples = load_labeled_samples(split=split)
-    labeled_keys = {(s.track_id, s.beat_idx) for s in labeled_samples}
 
-    # Build current unlabeled pool
-    unlabeled_pool = build_pool(
-        train_track_ids,
-        heuristic_per_track=20,
-        background_per_track=10,
-    )
+    # Build current unlabeled pool and filter out already labeled samples
+    unlabeled_pool = pool_filter(build_pool(train_track_ids), labeled_samples)
 
-    # Remove already labeled samples from the pool
-    unlabeled_pool = [
-        s for s in unlabeled_pool
-        if (s.track_id, s.beat_idx) not in labeled_keys
-    ]
     print(f"Initial unlabeled pool size: {len(unlabeled_pool)}")
 
     # If this is the first run, label an initial seed batch

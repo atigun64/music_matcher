@@ -39,6 +39,7 @@ def sample_to_ui(sample, cache: AudioFeatureCache, model_score: float) -> UISamp
         time_window=window_times(beat_idx=sample.beat_idx, beat_times=beat_times),
         tolerance_window=(beat_times[left_idx], beat_times[right_idx]),
         model_score=float(model_score),
+        label=getattr(sample, 'y', None),
     )
 
 
@@ -65,7 +66,11 @@ def main():
 
     selected_samples = labeled_samples
 
-    random.shuffle(selected_samples)
+    selected_samples = sorted(
+        selected_samples,
+        key=lambda s: abs(s.y - s.mscore),
+        reverse=True
+    )
 
     print(f"Selected {len(selected_samples)} samples")
 

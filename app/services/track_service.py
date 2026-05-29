@@ -37,7 +37,7 @@ class TrackService:
             max_speed=1.20,
         )
 
-        candidates = get_ml_candidates(E, O, C, B, beat_times)
+        candidates = get_ml_candidates(E, O, C, F, B, beat_times)
 
         annotations: List[AnnotationPoint] = []
         for _beat_idx, beat_time_sec, score in candidates:
